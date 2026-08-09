@@ -9,16 +9,44 @@ const { checkAndRolloverMonth } = require('./utils/monthRollover');
 
 const app = express();
 
-// ── Core middleware ─────────────────────────────────────────
-const allowedOrigins = (process.env.CLIENT_ORIGIN || '*')
+// ── Core CORS configuration ──────────────────────────────────
+const rawOrigins = process.env.CLIENT_ORIGIN || '';
+const allowedOrigins = rawOrigins
   .split(',')
-  .map((o) => o.trim());
+  .map((o) => o.trim().replace(/\/$/, '')) // strip trailing slashes
+  .filter(Boolean);
 
-app.use(
-  cors({
-    origin: allowedOrigins.includes('*') ? true : allowedOrigins,
-  })
-);
+const corsOptions = {
+  origin: function (origin, callback) {
+    // 1. Allow non-browser requests (mobile apps, Postman, curl)
+    if (!origin) return callback(null, true);
+
+    // 2. Allow local development origins
+    const isLocal = origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1');
+
+    // 3. Allow explicitly defined CLIENT_ORIGIN or any Vercel deployment URL
+    const isAllowedDomain = allowedOrigins.includes(origin);
+    const isVercelPreview = /\.vercel\.app$/.test(origin);
+
+    if (isLocal || isAllowedDomain || isVercelPreview) {
+      return callback(null, true);
+    }
+
+    return callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  credentials: true,
+  optionsSuccessStatus: 200,
+};
+
+// Apply CORS globally before any middleware or routes
+app.use(cors(corsOptions));
+
+// Explicitly handle OPTIONS preflight requests across all endpoints
+app.options('*', cors(corsOptions));
+
+// ── Other Core middleware ────────────────────────────────────
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -27,9 +55,6 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 // ── Month rollover guard ─────────────────────────────────────
-// Lazily checks on every /api request whether the calendar month has
-// advanced since the last check, and if so rolls resident statuses over
-// (paid -> pending, pending/overdue -> overdue) for the new month.
 app.use('/api', async (req, res, next) => {
   try {
     await checkAndRolloverMonth();
