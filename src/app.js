@@ -68,7 +68,7 @@ app.use('/api', async (req, res, next) => {
 app.get('/', (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'AURA-SMS backend API is running. See /api/health for status.',
+    message: 'ROYALE AVENUE backend API is running. See /api/health for status.',
   });
 });
 

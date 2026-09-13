@@ -8,7 +8,7 @@ const start = async () => {
   await connectDB();
 
   const server = app.listen(PORT, () => {
-    console.log(`[Server] AURA-SMS backend running on port ${PORT} (${process.env.NODE_ENV || 'development'})`);
+    console.log(`[Server] ROYALE AVENUE backend running on port ${PORT} (${process.env.NODE_ENV || 'development'})`);
   });
 
   // Graceful shutdown
