@@ -126,6 +126,49 @@ const markResidentPaid = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, { resident, payment }, 'Resident marked as paid successfully'));
 });
 
+// @desc    Bulk import residents from an uploaded Excel/CSV sheet. Skips
+//          rows whose flat number already exists, and rows missing required
+//          fields — returns a summary instead of failing the whole batch.
+// @route   POST /api/residents/bulk-import
+const bulkImportResidents = asyncHandler(async (req, res) => {
+  const { residents } = req.body;
+
+  if (!Array.isArray(residents) || residents.length === 0) {
+    throw new ApiError(400, 'residents array is required');
+  }
+
+  const summary = { added: 0, skippedDuplicates: [], errors: [] };
+
+  for (const row of residents) {
+    const name = (row.name || '').toString().trim();
+    const flat = (row.flat || '').toString().trim();
+    const phone = (row.phone || '').toString().trim();
+    const status = ['paid', 'pending', 'overdue'].includes(row.status) ? row.status : 'pending';
+
+    if (!name || !flat || !phone) {
+      summary.errors.push({ row, reason: 'Missing name, flat or phone' });
+      continue;
+    }
+    if (!/^\d{10}$/.test(phone)) {
+      summary.errors.push({ row, reason: 'Phone must be a 10 digit number' });
+      continue;
+    }
+
+    const existing = await Resident.findOne({ flat });
+    if (existing) {
+      summary.skippedDuplicates.push(flat);
+      continue;
+    }
+
+    await Resident.create({ name, flat, phone, status });
+    summary.added += 1;
+  }
+
+  res
+    .status(201)
+    .json(new ApiResponse(201, summary, `Imported ${summary.added} resident(s)`));
+});
+
 module.exports = {
   getResidents,
   getResidentById,
@@ -133,4 +176,5 @@ module.exports = {
   updateResident,
   deleteResident,
   markResidentPaid,
+  bulkImportResidents,
 };

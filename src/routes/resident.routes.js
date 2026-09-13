@@ -7,9 +7,11 @@ const {
   updateResident,
   deleteResident,
   markResidentPaid,
+  bulkImportResidents,
 } = require('../controllers/resident.controller');
 
 router.route('/').get(getResidents).post(createResident);
+router.route('/bulk-import').post(bulkImportResidents);
 router.route('/:id').get(getResidentById).put(updateResident).delete(deleteResident);
 router.route('/:id/mark-paid').post(markResidentPaid);
 
