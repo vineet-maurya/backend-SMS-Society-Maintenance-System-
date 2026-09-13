@@ -10,8 +10,8 @@ const userSchema = new mongoose.Schema(
     },
     societyName: {
       type: String,
-      required: [true, 'Society name is required'],
       trim: true,
+      default: 'Royal Avenue',
     },
     email: {
       type: String,

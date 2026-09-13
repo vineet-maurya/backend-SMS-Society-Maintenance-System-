@@ -10,8 +10,8 @@ const generateToken = require('../utils/generateToken');
 const signup = asyncHandler(async (req, res) => {
   const { fullName, societyName, email, phone, password } = req.body;
 
-  if (!fullName || !societyName || !email || !phone || !password) {
-    throw new ApiError(400, 'fullName, societyName, email, phone and password are all required');
+  if (!fullName || !email || !phone || !password) {
+    throw new ApiError(400, 'fullName, email, phone and password are all required');
   }
   if (password.length < 6) {
     throw new ApiError(400, 'Password must be at least 6 characters');
@@ -26,7 +26,7 @@ const signup = asyncHandler(async (req, res) => {
 
   const user = await User.create({
     fullName: fullName.trim(),
-    societyName: societyName.trim(),
+    societyName: societyName?.trim() || 'Royal Avenue',
     email: email.toLowerCase().trim(),
     phone: phone.trim(),
     passwordHash,
