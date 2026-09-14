@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const User = require('../models/User.model');
+const Resident = require('../models/Resident.model');
 const asyncHandler = require('../middleware/asyncHandler');
 const ApiError = require('../utils/ApiError');
 const ApiResponse = require('../utils/ApiResponse');
@@ -8,10 +9,10 @@ const generateToken = require('../utils/generateToken');
 // @desc    Register a new admin account for a society
 // @route   POST /api/auth/signup
 const signup = asyncHandler(async (req, res) => {
-  const { fullName, societyName, email, phone, password } = req.body;
+  const { fullName, societyName, houseNo, email, phone, password } = req.body;
 
-  if (!fullName || !email || !phone || !password) {
-    throw new ApiError(400, 'fullName, email, phone and password are all required');
+  if (!fullName || !houseNo || !email || !phone || !password) {
+    throw new ApiError(400, 'fullName, houseNo, email, phone and password are all required');
   }
   if (password.length < 6) {
     throw new ApiError(400, 'Password must be at least 6 characters');
@@ -23,14 +24,35 @@ const signup = asyncHandler(async (req, res) => {
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
+  const trimmedName = fullName.trim();
+  const trimmedPhone = phone.trim();
+  const trimmedHouseNo = houseNo.trim();
 
   const user = await User.create({
-    fullName: fullName.trim(),
+    fullName: trimmedName,
     societyName: societyName?.trim() || 'Royal Avenue',
+    houseNo: trimmedHouseNo,
     email: email.toLowerCase().trim(),
-    phone: phone.trim(),
+    phone: trimmedPhone,
     passwordHash,
   });
+
+  // Keep the Residents Directory in sync: if this house number is already
+  // there (e.g. imported from an Excel sheet), update it with the signed-up
+  // owner's name/phone; otherwise create a fresh resident entry for them.
+  const existingResident = await Resident.findOne({ flat: trimmedHouseNo });
+  if (existingResident) {
+    existingResident.name = trimmedName;
+    existingResident.phone = trimmedPhone;
+    await existingResident.save();
+  } else {
+    await Resident.create({
+      name: trimmedName,
+      flat: trimmedHouseNo,
+      phone: trimmedPhone,
+      status: 'pending',
+    });
+  }
 
   const token = generateToken(user._id);
 

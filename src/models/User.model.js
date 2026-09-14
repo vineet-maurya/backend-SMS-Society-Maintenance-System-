@@ -13,6 +13,10 @@ const userSchema = new mongoose.Schema(
       trim: true,
       default: 'Royal Avenue',
     },
+    houseNo: {
+      type: String,
+      trim: true,
+    },
     email: {
       type: String,
       required: [true, 'Email is required'],
