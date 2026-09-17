@@ -28,6 +28,10 @@ const signup = asyncHandler(async (req, res) => {
   const trimmedPhone = phone.trim();
   const trimmedHouseNo = houseNo.trim();
 
+  // Public signup NEVER accepts a client-supplied role — every account
+  // created through this endpoint is a normal resident ('user'). Admin
+  // accounts must be granted explicitly (e.g. directly in the database
+  // or via a separate admin-only endpoint), never through self-signup.
   const user = await User.create({
     fullName: trimmedName,
     societyName: societyName?.trim() || 'Royal Avenue',
@@ -35,6 +39,7 @@ const signup = asyncHandler(async (req, res) => {
     email: email.toLowerCase().trim(),
     phone: trimmedPhone,
     passwordHash,
+    role: 'user',
   });
 
   // Keep the Residents Directory in sync: if this house number is already

@@ -32,4 +32,22 @@ const protect = asyncHandler(async (req, res, next) => {
   next();
 });
 
-module.exports = { protect };
+/**
+ * Restricts a route to specific roles. Must be used AFTER `protect`, since
+ * it relies on req.user already being set.
+ *
+ * Usage: router.delete('/:id', protect, restrictTo('admin'), deleteResident);
+ */
+const restrictTo = (...allowedRoles) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      throw new ApiError(401, 'Not authorized — no user on request');
+    }
+    if (!allowedRoles.includes(req.user.role)) {
+      throw new ApiError(403, 'You do not have permission to perform this action');
+    }
+    next();
+  };
+};
+
+module.exports = { protect, restrictTo };

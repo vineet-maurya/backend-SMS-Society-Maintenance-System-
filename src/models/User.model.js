@@ -36,10 +36,13 @@ const userSchema = new mongoose.Schema(
       required: true,
       select: false, // never returned by default in queries
     },
+    // 'user'  -> normal resident account (default for all new signups)
+    // 'admin' -> society administrator, must be granted explicitly
+    // (never trust a client-supplied role — see auth.controller.js signup)
     role: {
       type: String,
-      enum: ['admin'],
-      default: 'admin',
+      enum: ['user', 'admin'],
+      default: 'user',
     },
   },
   { timestamps: true }
