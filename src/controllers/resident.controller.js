@@ -169,6 +169,22 @@ const bulkImportResidents = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, summary, `Imported ${summary.added} resident(s)`));
 });
 
+// @desc    Get a single resident's own payment history (used for the
+//          receipt modal on the Residents page). This is intentionally
+//          separate from the Payment Ledger (GET /api/payments), which
+//          lists every resident's transactions and is admin-only — this
+//          endpoint only ever returns records for the one resident in the
+//          URL, so it's safe to leave open to both roles, same as the rest
+//          of the Residents section.
+// @route   GET /api/residents/:id/payments
+const getResidentPayments = asyncHandler(async (req, res) => {
+  const resident = await Resident.findById(req.params.id);
+  if (!resident) throw new ApiError(404, 'Resident not found');
+
+  const payments = await Payment.find({ residentId: resident._id }).sort({ date: -1 });
+  res.status(200).json(new ApiResponse(200, payments));
+});
+
 module.exports = {
   getResidents,
   getResidentById,
@@ -177,4 +193,5 @@ module.exports = {
   deleteResident,
   markResidentPaid,
   bulkImportResidents,
+  getResidentPayments,
 };

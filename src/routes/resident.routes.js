@@ -8,6 +8,7 @@ const {
   deleteResident,
   markResidentPaid,
   bulkImportResidents,
+  getResidentPayments,
 } = require('../controllers/resident.controller');
 const { protect } = require('../middleware/auth.middleware');
 
@@ -19,5 +20,6 @@ router.route('/').get(getResidents).post(createResident);
 router.route('/bulk-import').post(bulkImportResidents);
 router.route('/:id').get(getResidentById).put(updateResident).delete(deleteResident);
 router.route('/:id/mark-paid').post(markResidentPaid);
+router.route('/:id/payments').get(getResidentPayments);
 
 module.exports = router;
