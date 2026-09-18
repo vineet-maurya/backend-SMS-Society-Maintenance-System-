@@ -9,6 +9,11 @@ const {
   markResidentPaid,
   bulkImportResidents,
 } = require('../controllers/resident.controller');
+const { protect } = require('../middleware/auth.middleware');
+
+// The Residents Directory is available to every logged-in user regardless
+// of role, so this only needs `protect` (auth required) — no restrictTo.
+router.use(protect);
 
 router.route('/').get(getResidents).post(createResident);
 router.route('/bulk-import').post(bulkImportResidents);
