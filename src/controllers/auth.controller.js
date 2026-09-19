@@ -9,7 +9,7 @@ const generateToken = require('../utils/generateToken');
 // @desc    Register a new admin account for a society
 // @route   POST /api/auth/signup
 const signup = asyncHandler(async (req, res) => {
-  const { fullName, societyName, houseNo, email, phone, password } = req.body;
+  const { fullName, societyName, houseNo, email, phone, password, role } = req.body;
 
   if (!fullName || !houseNo || !email || !phone || !password) {
     throw new ApiError(400, 'fullName, houseNo, email, phone and password are all required');
@@ -28,10 +28,22 @@ const signup = asyncHandler(async (req, res) => {
   const trimmedPhone = phone.trim();
   const trimmedHouseNo = houseNo.trim();
 
-  // Public signup NEVER accepts a client-supplied role — every account
-  // created through this endpoint is a normal resident ('user'). Admin
-  // accounts must be granted explicitly (e.g. directly in the database
-  // or via a separate admin-only endpoint), never through self-signup.
+  // Role chosen on the pre-signup role-selection page ("Resident User" vs
+  // "Admin User"), passed through from the client. Validated against the
+  // same enum as the User schema (see User.model.js) rather than trusted
+  // outright — anything missing or unrecognized safely falls back to the
+  // least-privileged role.
+  //
+  // SECURITY NOTE: unlike before, this endpoint now honors a
+  // client-supplied role, so anyone using the public signup form can
+  // self-select "Admin User" and get a full admin account with no
+  // approval step. That's what was explicitly requested for the
+  // role-selection flow. If this app is ever exposed somewhere strangers
+  // can sign up, put a real gate in front of admin creation instead (an
+  // invite/secret code, or restricting it to an admin-only endpoint).
+  const ALLOWED_SIGNUP_ROLES = ['user', 'admin'];
+  const resolvedRole = ALLOWED_SIGNUP_ROLES.includes(role) ? role : 'user';
+
   const user = await User.create({
     fullName: trimmedName,
     societyName: societyName?.trim() || 'Royal Avenue',
@@ -39,7 +51,7 @@ const signup = asyncHandler(async (req, res) => {
     email: email.toLowerCase().trim(),
     phone: trimmedPhone,
     passwordHash,
-    role: 'user',
+    role: resolvedRole,
   });
 
   // Keep the Residents Directory in sync: if this house number is already
