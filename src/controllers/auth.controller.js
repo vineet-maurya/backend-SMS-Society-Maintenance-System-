@@ -33,16 +33,25 @@ const signup = asyncHandler(async (req, res) => {
   // same enum as the User schema (see User.model.js) rather than trusted
   // outright — anything missing or unrecognized safely falls back to the
   // least-privileged role.
-  //
-  // SECURITY NOTE: unlike before, this endpoint now honors a
-  // client-supplied role, so anyone using the public signup form can
-  // self-select "Admin User" and get a full admin account with no
-  // approval step. That's what was explicitly requested for the
-  // role-selection flow. If this app is ever exposed somewhere strangers
-  // can sign up, put a real gate in front of admin creation instead (an
-  // invite/secret code, or restricting it to an admin-only endpoint).
   const ALLOWED_SIGNUP_ROLES = ['user', 'admin'];
   const resolvedRole = ALLOWED_SIGNUP_ROLES.includes(role) ? role : 'user';
+
+  // Cap self-service admin signup at exactly one account. This app is
+  // single-society (Residents/Payments aren't scoped per society), so
+  // "one admin" is a sensible global limit rather than per-society. Once
+  // that first admin exists, anyone else picking "Admin User" gets a
+  // clear error instead of silently becoming a second admin — they can
+  // still sign up as a Resident User, or the existing admin can add
+  // more admins directly in the database if that's ever needed.
+  if (resolvedRole === 'admin') {
+    const adminAlreadyExists = await User.exists({ role: 'admin' });
+    if (adminAlreadyExists) {
+      throw new ApiError(
+        409,
+        'An admin account already exists for this society. Please contact your existing admin, or sign up as a Resident User instead.',
+      );
+    }
+  }
 
   const user = await User.create({
     fullName: trimmedName,

@@ -36,9 +36,13 @@ const userSchema = new mongoose.Schema(
       required: true,
       select: false, // never returned by default in queries
     },
-    // 'user'  -> normal resident account (default for all new signups)
-    // 'admin' -> society administrator, must be granted explicitly
-    // (never trust a client-supplied role — see auth.controller.js signup)
+    // 'user'  -> normal resident account
+    // 'admin' -> society administrator
+    // Set at signup from the role chosen on the pre-signup role-selection
+    // page ("Resident User" / "Admin User"), validated against this enum
+    // in auth.controller.js's signup handler (falls back to 'user' if
+    // missing/invalid). Signup caps self-service admin creation at one
+    // account — see the admin-already-exists check in that handler.
     role: {
       type: String,
       enum: ['user', 'admin'],
